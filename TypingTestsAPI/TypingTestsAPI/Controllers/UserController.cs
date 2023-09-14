@@ -26,14 +26,11 @@ namespace TypingTestsAPI.Controllers
 
         [HttpPost]
         [Route("user/signup")]
-       //[ValidateAntiForgeryToken]
-        public IActionResult Signup([FromBody] User user)
+        public async Task<IActionResult> Signup([FromBody] User user)
         {
-            Console.WriteLine(user.Username);
-            
             try
             {
-                if (_userService.CreateUser(user))
+                if (await _userService.CreateUser(user))
                 {
                     _sessionManager.CreateUserSession(user);
                     return new StatusCodeResult(200);
@@ -46,16 +43,17 @@ namespace TypingTestsAPI.Controllers
                 return new StatusCodeResult(500);
             }
         }
+
+             
+
         [HttpPost]
         [Route("user/login")]
-        //[ValidateAntiForgeryToken]
-        public IActionResult Login([FromBody] User user)
+        public async Task<IActionResult> Login([FromBody] User user)
           
         {
             try
             {
-                Console.WriteLine("here");
-                if (_userService.LoginUser(user))
+                if (await _userService.LoginUser(user))
                 {
                     _sessionManager.CreateUserSession(user);
                     return new StatusCodeResult(200);
@@ -85,15 +83,14 @@ namespace TypingTestsAPI.Controllers
             
         }
 
-        //update user http://localhost:5002/user/UpdateUserData/?WordsPerMinute=220&Accuracy=100
         [HttpPost]
         [Route("user/UpdateUserData")]
-        public IActionResult UpdateUserData([FromBody]User user, double WordsPerMinute, double Accuracy)
+        public async Task<IActionResult> UpdateUserData([FromBody]User user, double WordsPerMinute, double Accuracy)
         {
             try
              {
                 
-                user = _userService.FindUserByName(user.Username);
+                user = await _userService.FindUserByName(user.Username);
                 user.TypingTests += 1 ;
                 if (user.TypingTests == 1)
                 {
@@ -109,7 +106,7 @@ namespace TypingTestsAPI.Controllers
                 test.WordsPerMinute = WordsPerMinute;
                 test.Accuracy = Accuracy;
                 user.tests.Add(test);
-                if(_userService.UpdateUser(user))
+                if(await _userService.UpdateUser(user))
                     return new StatusCodeResult(200);
                 else
                     return new StatusCodeResult(400);
@@ -121,11 +118,11 @@ namespace TypingTestsAPI.Controllers
         }
         [HttpGet]
         [Route("user/GetUserRank")]
-        public IActionResult GetUserRank(string username)
+        public async Task<IActionResult> GetUserRank(string username)
         {
             try
             {
-                User user = _userService.FindUserByName(username);
+                User user = await _userService.FindUserByName(username);
                 return new OkObjectResult(_userService.GetUserRank(user));
             }
             catch (Exception)
@@ -135,15 +132,14 @@ namespace TypingTestsAPI.Controllers
         }
         [HttpPost]
         [Route("user/UpdateProfilePicture")]
-        //http://localhost:5002/user/UpdateProfilePicture/?profileImageLink=?
-        public IActionResult UpdateProfilePicture([FromBody] User user, string profileImageLink)
+        public async Task<IActionResult> UpdateProfilePicture([FromBody] User user, string profileImageLink)
         {
             try
             {
-                user = _userService.FindUserByName(user.Username);
+                user = await _userService.FindUserByName(user.Username);
                 user.ProfileImage = profileImageLink;
 
-               if(_userService.UpdateUser(user))
+               if(await _userService.UpdateUser(user))
                     return new StatusCodeResult(200);
                else
                     return new StatusCodeResult(400);
@@ -153,14 +149,13 @@ namespace TypingTestsAPI.Controllers
                 return new StatusCodeResult(500);
             }
         }
-        //http://localhost:5002/user/GetUserData/?username=ronald2
         [HttpGet]
         [Route("user/GetUserData")]
-        public IActionResult GetUserData(string username)
+        public async Task<IActionResult> GetUserData(string username)
         {
             try
             {
-                User userToGet = _userService.FindUserByName(username);
+                User userToGet = await _userService.FindUserByName(username);
                 return new OkObjectResult(userToGet);
             }
             catch (Exception)
@@ -171,11 +166,11 @@ namespace TypingTestsAPI.Controllers
 
         [HttpGet]
         [Route("user/GetLeadboard")]
-        public IActionResult GetLeadboard()
+        public async Task<IActionResult> GetLeadboard()
         {
             try
             {
-                var leaderboard = _userService.GetLeaderboardOfUsers();
+                var leaderboard = await _userService.GetLeaderboardOfUsers();
                 if(leaderboard== null)
                     return new StatusCodeResult(500);
                 else

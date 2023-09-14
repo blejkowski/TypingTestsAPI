@@ -5,10 +5,11 @@ using TypingTestsAPI.Models;
 using TypingTestsAPI.Helpers;
 using BCrypt.Net;
 using MongoDB.Bson;
+using MoneyMeterAPI.Services;
 
 namespace TypingTestsAPI.Services
 {
-    public class UserService
+    public class UserService : IUserService
     {
 
         private readonly IMongoCollection<User> _users = null!;
@@ -28,22 +29,23 @@ namespace TypingTestsAPI.Services
 
         }
 
-        internal bool UpdateUser(User userToUpdate)
+        async public Task<bool> UpdateUser(User user)
         {
             try
             {
-                return _users.ReplaceOne(x => x.Id == userToUpdate.Id, userToUpdate).ModifiedCount > 0 ? true : false;
+                await _users.ReplaceOneAsync(x => x.Id == user.Id, user);
+                return true;
             }
             catch (Exception)
             {
                 return false;
             }
         }
-        internal User FindUserByName(string username)
+        async public Task<User> FindUserByName(string username)
         {
             try
             {
-                User result = _users.Find(x => x.Username == username).Project<User>(Builders<User>.Projection.Exclude(x => x.Password)).FirstOrDefault();
+                User result = await _users.Find(x => x.Username == username).FirstOrDefaultAsync();
                 return result;
             }
             catch (Exception)
@@ -52,33 +54,31 @@ namespace TypingTestsAPI.Services
             }
         }
 
-        internal bool CreateUser(User user)
+        async public Task<bool> CreateUser(User user)
         {
             try
             {
-                User createdUser = _users.Find(x => x.Username == user.Username).FirstOrDefault();
-                if (createdUser != null)
-                {
+                User userToRegister = await _users.Find(x => x.Username == user.Username).FirstOrDefaultAsync();
+
+                if (userToRegister != null)
                     return false;
-                }
-                else
-                {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password, 8);
-                    _users.InsertOne(user);
-                    return true;
-                }
+
+                userToRegister.Password = BCrypt.Net.BCrypt.HashPassword(userToRegister.Password, 8);
+                await _users.InsertOneAsync(userToRegister);
+                return true;
+
             }
             catch (Exception)
             {
                 return false;
             }
-
         }
-        public bool LoginUser(User userToLogin)
+        
+        public async Task<bool> LoginUser(User userToLogin)
         {
             try
             {
-                User user = _users.Find(x => x.Username == userToLogin.Username).FirstOrDefault();
+                User user = await _users.Find(x => x.Username == userToLogin.Username).FirstOrDefaultAsync();
                 if (user == null)
                     return false;
 
@@ -92,11 +92,11 @@ namespace TypingTestsAPI.Services
                 return false;
             }
         }
-        public int GetUserRank(User user)
+        public async Task<int> GetUserRank(User user)
         {
             try
             {
-                var users = _users.AsQueryable<User>().ToList();
+                var users = await _users.AsQueryable<User>().ToListAsync();
                 users.Sort((a, b) => b.AverageWpm.CompareTo(a.AverageWpm));
 
                 int userRank = users.FindIndex(x => x.Username == user.Username) + 1;
@@ -107,11 +107,11 @@ namespace TypingTestsAPI.Services
             }
         }
 
-        public List<User> GetLeaderboardOfUsers()
+        public async Task<List<User>> GetLeaderboardOfUsers()
         {
             try
             {
-                var users = _users.AsQueryable<User>().ToList();
+                var users = await _users.AsQueryable<User>().ToListAsync();
                 users.Sort((a, b) => b.AverageWpm.CompareTo(a.AverageWpm));
                 return users.GetRange(0, 10);
             }
